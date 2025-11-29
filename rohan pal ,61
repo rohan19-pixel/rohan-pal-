@@ -1,0 +1,305 @@
+question 1-import re
+def extract_all(text):
+    patterns={
+        "Indian Mobile":r"\b[6-9]\d{9}\b",
+        "PAN":r"\b[A-Z]{5}[0-9]{4}[A-Z]\b",
+        "Aadhaar":r"\b\d{12}\b",
+        "Postal PIN":r"\b[1-9][0-9]{5}\b",
+        "URL":r"\b(?:https?://)?(?:www\.)?[A-Za-z0-9\-_]+\.[A-Za-z]{2,}(?:/[^\s]*)?\b",
+        "IPv4":r"\b(?:(?:25[0-5]|2[0-4]\d|1?\d{1,2})\.){3}(?:25[0-5]|2[0-4]\d|1?\d{1,2})\b",
+        "Strong Password":r"\b(?=.{8,})(?=.[a-z])(?=.[A-Z])(?=.\d)(?=.[^A-Za-z0-9]).*\b"
+    }
+    results={}
+    for k,p in patterns.items():
+        results[k]=re.findall(p,text)
+    return results
+def main():
+    print("Paste text (end with a blank line):")
+    lines=[]
+    while True:
+        try:
+            l=input()
+        except EOFError:
+            break
+        if l=="":
+            break
+        lines.append(l)
+    text="\n".join(lines)
+    out=extract_all(text)
+    for k,v in out.items():
+        print(f"{k}:")
+        if v:
+            for item in sorted(set(v), key=lambda x:text.find(x)):
+                print(" ",item)
+        else:
+            print("  None found")
+if _name=="main_":
+    main()
+question 2-import os
+import sys
+FNAME="covid_records.txt"
+def append_record(name,age,gender,vaccine,date):
+    with open(FNAME,"a",encoding="utf-8") as f:
+        f.write(f"{name}|{age}|{gender}|{vaccine}|{date}\n")
+def read_records():
+    if not os.path.exists(FNAME):
+        return []
+    with open(FNAME,"r",encoding="utf-8") as f:
+        lines=[l.strip() for l in f if l.strip()]
+    records=[l.split("|") for l in lines]
+    return records
+def display(records):
+    cols=["Name","Age","Gender","Vaccine","Date"]
+    widths=[20,5,8,15,12]
+    header="".join(c.ljust(w) for c,w in zip(cols,widths))
+    print(header)
+    print("-"*sum(widths))
+    for r in records:
+        row=[(r[i] if i<len(r) else "").ljust(w) for i,w in enumerate(widths)]
+        print("".join(row))
+def main():
+    try:
+        while True:
+            print("1 Add 2 View 3 Exit")
+            c=input("Choice: ").strip()
+            if c=="1":
+                name=input("Name: ").strip()
+                age=input("Age: ").strip()
+                gender=input("Gender: ").strip()
+                vaccine=input("Vaccine: ").strip()
+                date=input("Date (YYYY-MM-DD): ").strip()
+                append_record(name,age,gender,vaccine,date)
+                print("Record appended.")
+            elif c=="2":
+                rec=read_records()
+                display(rec)
+            elif c=="3":
+                break
+            else:
+                print("Invalid choice")
+    except Exception as e:
+        print("Error:",e)
+        sys.exit(1)
+if _name=="main_":
+    main()
+question 3-import json,os,re,sys
+FNAME="library.json"
+def load():
+    if not os.path.exists(FNAME):
+        return {},set()
+    with open(FNAME,"r",encoding="utf-8") as f:
+        data=json.load(f)
+    books={b["id"]:b for b in data}
+    ids=set(books.keys())
+    return books,ids
+def save(books):
+    with open(FNAME,"w",encoding="utf-8") as f:
+        json.dump(list(books.values()),f,indent=2)
+def add_book(books,ids):
+    bid=input("ID: ").strip()
+    if bid in ids:
+        print("Duplicate ID")
+        return
+    name=input("Name: ").strip()
+    author=input("Author: ").strip()
+    category=input("Category: ").strip()
+    books[bid]={"id":bid,"name":name,"author":author,"category":category}
+    ids.add(bid)
+    save(books)
+    print("Added")
+def search_books(books):
+    kw=input("Regex keyword: ").strip()
+    try:
+        prog=re.compile(kw, re.IGNORECASE)
+    except Exception as e:
+        print("Invalid regex")
+        return
+    found=[]
+    for b in books.values():
+        s=f"{b['id']} {b['name']} {b['author']} {b['category']}"
+        if prog.search(s):
+            found.append(b)
+    if not found:
+        print("No matches")
+    else:
+        for b in found:
+            print(b)
+def update_book(books,ids):
+    bid=input("ID to update: ").strip()
+    if bid not in ids:
+        print("Not found")
+        return
+    name=input("New name (blank to keep): ").strip()
+    author=input("New author (blank to keep): ").strip()
+    category=input("New category (blank to keep): ").strip()
+    if name:
+        books[bid]["name"]=name
+    if author:
+        books[bid]["author"]=author
+    if category:
+        books[bid]["category"]=category
+    save(books)
+    print("Updated")
+def delete_book(books,ids):
+    bid=input("ID to delete: ").strip()
+    if bid not in ids:
+        print("Not found")
+        return
+    del books[bid]
+    ids.remove(bid)
+    save(books)
+    print("Deleted")
+def list_books(books):
+    if not books:
+        print("No books")
+        return
+    for b in books.values():
+        print(b)
+def explain():
+    print("Lists store ordered results, dicts map ids to entries, sets prevent duplicates, files persist data.")
+def main():
+    try:
+        books,ids=load()
+        while True:
+            print("1 Add 2 Search 3 Update 4 Delete 5 List 6 Explain 7 Exit")
+            c=input("Choice: ").strip()
+            if c=="1":
+                add_book(books,ids)
+            elif c=="2":
+                search_books(books)
+            elif c=="3":
+                update_book(books,ids)
+            elif c=="4":
+                delete_book(books,ids)
+            elif c=="5":
+                list_books(books)
+            elif c=="6":
+                explain()
+            elif c=="7":
+                break
+            else:
+                print("Invalid")
+    except Exception as e:
+        print("Error:",e)
+        sys.exit(1)
+if _name=="main_":
+    main()
+question 4-class Person:
+    def _init_(self, name):
+        self.name = name
+        self.__salary = 0
+    def set_salary(self, amount):
+        self.__salary = amount
+    def get_salary(self):
+        return self.__salary
+
+class Employee(Person):
+    def _init_(self, name, role):
+        super()._init_(name)
+        self.role = role
+
+p = Employee("Rahul", "Manager")
+p.set_salary(50000)
+print(p.name, p.role, p.get_salary())
+question 5-class Vehicle:
+    def calculate_fare(self, km):
+        return 0
+
+class Auto(Vehicle):
+    def calculate_fare(self, km):
+        return km * 12
+
+class Bike(Vehicle):
+    def calculate_fare(self, km):
+        return km * 8
+
+class Sedan(Vehicle):
+    def calculate_fare(self, km):
+        return km * 18
+
+for v in [Auto(), Bike(), Sedan()]:
+    print(v.calculate_fare(10))
+question 6-class Staff:
+    def _init_(self, name):
+        self.name = name
+
+class Doctor(Staff):
+    def duty(self):
+        return self.name + " treats patients"
+
+class Nurse(Staff):
+    def duty(self):
+        return self.name + " manages medications"
+
+class Surgeon(Staff):
+    def duty(self):
+        return self.name + " performs surgery"
+
+class LabTech(Staff):
+    def duty(self):
+        return self.name + " conducts tests"
+
+workers=[Doctor("A"),Nurse("B"),Surgeon("C"),LabTech("D")]
+for w in workers:
+    print(w.duty())
+question 7-class Account:
+    def _init_(self):
+        self.__balance = 0
+    def deposit(self, amt):
+        self.__balance += amt
+    def withdraw(self, amt):
+        if amt <= self.__balance:
+            self.__balance -= amt
+    def get_balance(self):
+        return self.__balance
+
+a = Account()
+a.deposit(5000)
+a.withdraw(1500)
+print(a.get_balance())
+question 8-class Student:
+    def _init_(self, name):
+        self.name = name
+        self.__internal = 0
+        self.__medical_leave = 0
+        self.__disciplinary = "Good"
+    def update_internal(self, marks):
+        if 0 <= marks <= 30:
+            self.__internal = marks
+    def get_internal(self):
+        return self.__internal
+
+s = Student("John")
+s.update_internal(27)
+print(s.name, s.get_internal())
+question9-from abc import ABC, abstractmethod
+class Payment(ABC):
+    @abstractmethod
+    def pay(self, amount):
+        pass
+
+class UPI(Payment):
+    def pay(self, amount):
+        return "UPI Paid " + str(amount)
+
+class Card(Payment):
+    def pay(self, amount):
+        return "Card Paid " + str(amount)
+
+class Wallet(Payment):
+    def pay(self, amount):
+        return "Wallet Paid " + str(amount)
+
+for p in [UPI(), Card(), Wallet()]:
+    print(p.pay(500))
+question 10-import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+df = sns.load_dataset("tips")
+sns.histplot(df["total_bill"])
+plt.show()
+sns.boxplot(df["total_bill"])
+plt.show()
+sns.heatmap(df.corr(), annot=True)
+plt.show()
